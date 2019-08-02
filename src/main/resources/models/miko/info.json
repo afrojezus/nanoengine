@@ -1,0 +1,13 @@
+{
+	"name": "char:櫻歌ミコ:キツネツキ式",
+	"character":
+		{
+			"height":1.35,
+			"motions":
+				{
+					"stand":"basic_stand.vmd",
+					"walk": 	"basic_walk.vmd",
+					"run":	"basic_run.vmd"
+				}
+		}
+}
