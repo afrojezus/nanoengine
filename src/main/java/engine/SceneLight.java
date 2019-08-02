@@ -1,8 +1,8 @@
 package engine;
 
-import engine.graph.DirectionalLight;
-import engine.graph.PointLight;
-import engine.graph.SpotLight;
+import engine.graph.lights.DirectionalLight;
+import engine.graph.lights.PointLight;
+import engine.graph.lights.SpotLight;
 import org.joml.Vector3f;
 
 public class SceneLight {

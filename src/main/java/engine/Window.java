@@ -1,5 +1,6 @@
 package engine;
 
+import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
@@ -9,19 +10,45 @@ import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class Window {
+    /**
+     * Field of View in Radians
+     */
+    public static final float FOV = (float) Math.toRadians(60.0f);
+
+    /**
+     * Distance to the near plane
+     */
+    public static final float Z_NEAR = 0.01f;
+
+    /**
+     * Distance to the far plane
+     */
+    public static final float Z_FAR = 1000.f;
+
     private final String title;
+
     private int width;
+
     private int height;
+
     private long windowHandle;
+
     private boolean resized;
+
     private boolean vSync;
 
-    public Window(String title, int width, int height, boolean vSync) {
+    private final WindowOptions opts;
+
+    private final Matrix4f projectionMatrix;
+
+    public Window(String title, int width, int height, boolean vSync, WindowOptions opts) {
         this.title = title;
         this.width = width;
         this.height = height;
-        this.resized = false;
         this.vSync = vSync;
+        this.resized = false;
+        this.opts = opts;
+        projectionMatrix = new Matrix4f();
     }
 
     public void init() {
@@ -37,12 +64,24 @@ public class Window {
         glfwDefaultWindowHints(); // optional, the current window hints are already the default
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE); // the window will stay hidden after creation
         glfwWindowHint(GLFW_RESIZABLE, GL_TRUE); // the window will be resizable
-
-        // OSX Modifications
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        if (opts.compatibleProfile) {
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+        } else {
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        }
+
+        boolean maximized = false;
+        // If no size has been specified set it to maximized state
+        if (width == 0 || height == 0) {
+            // Set up a fixed width and height so window initialization does not fail
+            width = 100;
+            height = 100;
+            glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+            maximized = true;
+        }
 
         // Create the window
         windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
@@ -50,7 +89,6 @@ public class Window {
             throw new RuntimeException("Failed to create the GLFW window");
         }
 
-        // Setup resize callback
         glfwSetFramebufferSizeCallback(windowHandle, (window, width, height) -> {
             this.width = width;
             this.height = height;
@@ -64,15 +102,18 @@ public class Window {
             }
         });
 
-        // Get the resolution of the primary monitor
-        GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-        // Center our window
-        assert vidmode != null;
-        glfwSetWindowPos(
-                windowHandle,
-                (vidmode.width() - width) / 2,
-                (vidmode.height() - height) / 2
-        );
+        if (maximized) {
+            glfwMaximizeWindow(windowHandle);
+        } else {
+            // Get the resolution of the primary monitor
+            GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+            // Center our window
+            glfwSetWindowPos(
+                    windowHandle,
+                    (vidmode.width() - width) / 2,
+                    (vidmode.height() - height) / 2
+            );
+        }
 
         // Make the OpenGL context current
         glfwMakeContextCurrent(windowHandle);
@@ -89,16 +130,61 @@ public class Window {
 
         // Set the clear color
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
         glEnable(GL_DEPTH_TEST);
+        glEnable(GL_STENCIL_TEST);
+        if (opts.showTriangles) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
 
-        // Support for transparencies
-        glEnable(GL_BLEND);
+        if (opts.cullFace) {
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+        }
+
+        // Antialiasing
+        if (opts.antialiasing) {
+            glfwWindowHint(GLFW_SAMPLES, 4);
+        }
+    }
+
+    public void restoreState() {
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_STENCIL_TEST);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        if (opts.cullFace) {
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+        }
     }
 
     public long getWindowHandle() {
         return windowHandle;
+    }
+
+    public String getWindowTitle() {
+        return title;
+    }
+
+    public void setWindowTitle(String title) {
+        glfwSetWindowTitle(windowHandle, title);
+    }
+
+    public WindowOptions getWindowOptions() {
+        return opts;
+    }
+
+    public Matrix4f getProjectionMatrix() {
+        return projectionMatrix;
+    }
+
+    public Matrix4f updateProjectionMatrix() {
+        float aspectRatio = (float) width / (float) height;
+        return projectionMatrix.setPerspective(FOV, aspectRatio, Z_NEAR, Z_FAR);
+    }
+
+    public static Matrix4f updateProjectionMatrix(Matrix4f matrix, int width, int height) {
+        float aspectRatio = (float) width / (float) height;
+        return matrix.setPerspective(FOV, aspectRatio, Z_NEAR, Z_FAR);
     }
 
     public void setClearColor(float r, float g, float b, float alpha) {
@@ -129,20 +215,39 @@ public class Window {
         return resized;
     }
 
+    public void setResized(boolean resized) {
+        this.resized = resized;
+    }
+
     public boolean isvSync() {
         return vSync;
     }
 
-    public void setvSync(boolean v) {
-        this.vSync = v;
-    }
-
-    public void setResized(boolean b) {
-        this.resized = b;
+    public void setvSync(boolean vSync) {
+        this.vSync = vSync;
     }
 
     public void update() {
         glfwSwapBuffers(windowHandle);
         glfwPollEvents();
+    }
+
+    public WindowOptions getOptions() {
+        return opts;
+    }
+
+    public static class WindowOptions {
+
+        public boolean cullFace;
+
+        public boolean showTriangles;
+
+        public boolean showFps;
+
+        public boolean compatibleProfile;
+
+        public boolean antialiasing;
+
+        public boolean frustumCulling;
     }
 }

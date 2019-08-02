@@ -6,6 +6,8 @@ import org.joml.Vector2f;
 import static org.lwjgl.glfw.GLFW.*;
 
 public class MouseInput {
+    private boolean isLocked = false;
+
     private final Vector2d previousPos;
 
     private final Vector2d currentPos;
@@ -25,6 +27,7 @@ public class MouseInput {
     }
 
     public void init(Window window) {
+
         glfwSetCursorPosCallback(window.getWindowHandle(), (windowHandle, xpos, ypos) -> {
             currentPos.x = xpos;
             currentPos.y = ypos;
@@ -59,6 +62,20 @@ public class MouseInput {
         }
         previousPos.x = currentPos.x;
         previousPos.y = currentPos.y;
+    }
+
+    public boolean isInWindow() {
+        return inWindow;
+    }
+
+    public boolean isLocked() {
+        return isLocked;
+    }
+
+    public void lockCursor(Window window) {
+        glfwSetCursorPos(window.getWindowHandle(), window.getWidth()/2, window.getHeight()/2);
+
+        isLocked = true;
     }
 
     public boolean isLeftButtonPressed() {

@@ -2,62 +2,157 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="25143cca-2847-496e-bf9f-902aa841d949" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/GameItem.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/IHud.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/MouseInput.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/Scene.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/SceneLight.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/SkyBox.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/Terrain.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/TextItem.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Camera.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/DirectionalLight.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/FontTexture.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/HeightMapMesh.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Material.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Mesh.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/OBJLoader.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/PointLight.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Renderer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/SpotLight.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Texture.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Transformation.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/game/Hud.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/compass.obj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/cube.obj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/info.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/miko.mtl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/miko.obj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/miko_small.mtl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/miko_small.obj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/tex001.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/tex002.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/tex003.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/miko/tex004.tga" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/models/skybox.obj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/fragment.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/hud_fragment.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/hud_vertex.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/skybox_fragment.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/skybox_vertex.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/vertex.glsl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/textures/font_texture.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/textures/heightmap.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/textures/lolicube.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/textures/skybox.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/textures/terrain.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/Player.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/ArrTexture.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/FrustumCullingFilter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/GBuffer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/InstancedMesh.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/SceneBuffer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/anim/AnimGameItem.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/anim/AnimatedFrame.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/anim/Animation.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/particle/FlowParticleEmitter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/particle/IParticleEmitter.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/particle/Particle.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/shadow/ShadowBuffer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/shadow/ShadowCascade.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/shadow/ShadowRenderer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/shadow/ShadowTestRenderer.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/graph/weather/Fog.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/item/GameItem.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/item/SkyBox.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/item/Terrain.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/loaders/assimp/AnimMeshesLoader.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/loaders/assimp/Bone.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/loaders/assimp/Node.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/loaders/assimp/StaticMeshesLoader.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/loaders/assimp/TextureCache.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/engine/loaders/assimp/VertexWeight.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/game/CameraBoxSelectionDetector.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/game/Game.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/game/MouseBoxSelectionDetector.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/game/level/Level.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/fonts/ProFont.ttf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/depth_fragment.fs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/depth_vertex.vs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/dir_light_fragment.fs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/fog_fragment.fs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/gbuffer_fragment.fs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/gbuffer_vertex.vs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/light_vertex.vs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/particles_fragment.fs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/particles_vertex.vs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/point_light_fragment.fs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/sb_fragment.fs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/sb_vertex.vs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/test_fragment.fs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/shaders/test_vertex.vs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/sounds/CREDITS.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/sounds/background.ogg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/sounds/beep.ogg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/sounds/fire.ogg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/bob/boblamp.md5anim" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/bob/boblamp.md5mesh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/buffer_pass_mess.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/bunny.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/compass.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/cube.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/house/SOURCE.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/house/house.mtl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/house/house.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/house/house_text.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/house/house_text_bmap.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/info.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/miko.mtl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/miko.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/miko_small.mtl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/miko_small.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/tex001.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/tex002.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/tex003.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/miko/tex004.tga" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/monster/monster.md5anim" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/monster/monster.md5mesh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/particle.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/plane.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/quad.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/skybox.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/terrain/terrain.mtl" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/models/terrain/terrain.obj" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_body.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_body_h.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_body_s.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_face.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_face_local.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_face_s.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_helmet.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_helmet_h.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/guard1_helmet_s.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/iron_grill.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/round_grill.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/bob/round_grill_h.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/grassblock.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/gob.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/gob2.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/gob2_s.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/gob_s.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/hellknight.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/hellknight_local.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/hellknight_s.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/tongue.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/tongue_local.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/monster/tongue_s.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/particle.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/particle_anim.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/particle_tmp.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/rock.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/rock_normals.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/textures/terrain_textures.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/engine/GameEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/GameEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/GameItem.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/engine/IGameLogic.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/IGameLogic.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/IHud.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/IHud.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/MouseInput.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/MouseInput.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/Scene.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/Scene.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/SceneLight.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/SceneLight.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/SkyBox.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/Terrain.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/TextItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/item/TextItem.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/engine/Utils.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/Utils.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/engine/Window.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/Window.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/Camera.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Camera.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/DirectionalLight.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/lights/DirectionalLight.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/HeightMapMesh.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/HeightMapMesh.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/Material.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Material.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/Mesh.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Mesh.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/PointLight.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/lights/PointLight.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/Renderer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Renderer.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/ShaderProgram.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/ShaderProgram.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/SpotLight.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/lights/SpotLight.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/Texture.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Texture.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/engine/graph/Transformation.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/engine/graph/Transformation.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/game/Hud.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/Hud.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/game/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/game/Nanodesu.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/game/Nanodesu.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/game/Renderer.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/fragment.glsl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/vertex.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/game/Nanodesu.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/compass.obj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/cube.obj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/info.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/miko.mtl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/miko.obj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/miko_small.mtl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/miko_small.obj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/tex001.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/tex002.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/tex003.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/miko/tex004.tga" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/models/skybox.obj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/shaders/fragment.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/shaders/hud_fragment.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/shaders/hud_vertex.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/shaders/skybox_fragment.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/shaders/skybox_vertex.glsl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/shaders/vertex.glsl" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -78,6 +173,7 @@
       <list>
         <option value="Interface" />
         <option value="GLSL Shader" />
+        <option value="Enum" />
         <option value="Class" />
       </list>
     </option>

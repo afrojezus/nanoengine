@@ -1,236 +1,590 @@
 package engine.graph;
 
 import engine.*;
-import engine.graph.*;
+import engine.graph.anim.AnimGameItem;
+import engine.graph.anim.AnimatedFrame;
+import engine.graph.lights.DirectionalLight;
+import engine.graph.lights.PointLight;
+import engine.graph.particle.IParticleEmitter;
+import engine.graph.shadow.ShadowCascade;
+import engine.graph.shadow.ShadowRenderer;
+import engine.item.GameItem;
+import engine.item.SkyBox;
+import engine.loaders.assimp.StaticMeshesLoader;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.lwjgl.opengl.ARBFramebufferObject.GL_DRAW_FRAMEBUFFER;
+import static org.lwjgl.opengl.ARBFramebufferObject.GL_FRAMEBUFFER;
+import static org.lwjgl.opengl.ARBImaging.GL_FUNC_ADD;
+import static org.lwjgl.opengl.ARBImaging.glBlendEquation;
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL30.glGenVertexArrays;
+import static org.lwjgl.opengl.GL13.GL_TEXTURE2;
+import static org.lwjgl.opengl.GL30.*;
 
 public class Renderer {
 
-    /**
-     * Field of View in Radians
-     */
-    private static final float FOV = (float) Math.toRadians(60.0f);
-    private static final float Z_NEAR = 0.01f;
-    private static final float Z_FAR = 1000.f;
-    private static final int MAX_POINT_LIGHTS = 5;
-    private static final int MAX_SPOT_LIGHTS = 5;
     private final Transformation transformation;
-    private ShaderProgram sceneShaderProgram;
-    private ShaderProgram hudShaderProgram;
+
+    private final ShadowRenderer shadowRenderer;
+
     private ShaderProgram skyBoxShaderProgram;
+
+    private ShaderProgram particlesShaderProgram;
+
+    private ShaderProgram gBufferShaderProgram;
+
+    private ShaderProgram dirLightShaderProgram;
+
+    private ShaderProgram pointLightShaderProgram;
+
+    private ShaderProgram fogShaderProgram;
+
     private final float specularPower;
+
+    private final FrustumCullingFilter frustumFilter;
+
+    private final List<GameItem> filteredItems;
+
+    private GBuffer gBuffer;
+
+    private SceneBuffer sceneBuffer;
+
+    private Mesh bufferPassMesh;
+
+    private Matrix4f bufferPassModelMatrix;
+
+    private Vector4f tmpVec;
 
     public Renderer() {
         transformation = new Transformation();
         specularPower = 10f;
+        shadowRenderer = new ShadowRenderer();
+        frustumFilter = new FrustumCullingFilter();
+        filteredItems = new ArrayList<>();
+        tmpVec = new Vector4f();
     }
 
     public void init(Window window) throws Exception {
-        setupSceneShader();
-        setupHudShader();
+        shadowRenderer.init(window);
+        gBuffer = new GBuffer(window);
+        sceneBuffer = new SceneBuffer(window);
         setupSkyBoxShader();
+        setupParticlesShader();
+        setupGeometryShader();
+        setupDirLightShader();
+        setupPointLightShader();
+        setupFogShader();
+
+        bufferPassModelMatrix =  new Matrix4f();
+        bufferPassMesh = StaticMeshesLoader.load("src/models/buffer_pass_mess.obj", "models")[0];
     }
 
-    public void setupSceneShader() throws Exception {
-        // Create shader
-        sceneShaderProgram = new ShaderProgram();
-        sceneShaderProgram.createVertexShader(Utils.loadResource("shaders/vertex.glsl"));
-        sceneShaderProgram.createFragmentShader(Utils.loadResource("shaders/fragment.glsl"));
-        sceneShaderProgram.link();
+    public void render(Window window, Camera camera, Scene scene, boolean sceneChanged) {
+        clear();
 
-        // Create uniforms for modelView and projection matrices and texture
-        sceneShaderProgram.createUniform("projectionMatrix");
-        sceneShaderProgram.createUniform("modelViewMatrix");
-        sceneShaderProgram.createUniform("texture_sampler");
-        // Create uniform for material
-        sceneShaderProgram.createMaterialUniform("material");
-        // Create lighting related uniforms
-        sceneShaderProgram.createUniform("specularPower");
-        sceneShaderProgram.createUniform("ambientLight");
-        sceneShaderProgram.createPointLightListUniform("pointLights", MAX_POINT_LIGHTS);
-        sceneShaderProgram.createSpotLightListUniform("spotLights", MAX_SPOT_LIGHTS);
-        sceneShaderProgram.createDirectionalLightUniform("directionalLight");
+        if (window.getOptions().frustumCulling) {
+            frustumFilter.updateFrustum(window.getProjectionMatrix(), camera.getViewMatrix());
+            frustumFilter.filter(scene.getGameMeshes());
+            frustumFilter.filter(scene.getGameInstancedMeshes());
+        }
+
+        // Render depth map before view ports has been set up
+        if (scene.isRenderShadows() && sceneChanged) {
+            shadowRenderer.render(window, scene, camera, transformation, this);
+        }
+
+        glViewport(0, 0, window.getWidth(), window.getHeight());
+
+        // Update projection matrix once per render cycle
+        window.updateProjectionMatrix();
+
+        renderGeometry(window, camera, scene);
+
+        initLightRendering();
+        renderPointLights(window, camera, scene);
+        renderDirectionalLight(window, camera, scene);
+        endLightRendering();
+
+        renderFog(window, camera, scene);
+        renderSkyBox(window, camera, scene);
+        renderParticles(window, camera, scene);
     }
 
-    private void setupHudShader() throws Exception {
-        hudShaderProgram = new ShaderProgram();
-        hudShaderProgram.createVertexShader(Utils.loadResource("shaders/hud_vertex.glsl"));
-        hudShaderProgram.createFragmentShader(Utils.loadResource("shaders/hud_fragment.glsl"));
-        hudShaderProgram.link();
+    private void setupParticlesShader() throws Exception {
+        particlesShaderProgram = new ShaderProgram();
+        particlesShaderProgram.createVertexShader(Utils.loadResource("shaders/particles_vertex.vs"));
+        particlesShaderProgram.createFragmentShader(Utils.loadResource("shaders/particles_fragment.fs"));
+        particlesShaderProgram.link();
 
-        // Create uniforms for Orthographic-model projection matrix and base colour
-        hudShaderProgram.createUniform("projModelMatrix");
-        hudShaderProgram.createUniform("colour");
-        hudShaderProgram.createUniform("hasTexture");
+        particlesShaderProgram.createUniform("viewMatrix");
+        particlesShaderProgram.createUniform("projectionMatrix");
+        particlesShaderProgram.createUniform("texture_sampler");
+
+        particlesShaderProgram.createUniform("numCols");
+        particlesShaderProgram.createUniform("numRows");
     }
 
     private void setupSkyBoxShader() throws Exception {
         skyBoxShaderProgram = new ShaderProgram();
-        skyBoxShaderProgram.createVertexShader(Utils.loadResource("shaders/skybox_vertex.glsl"));
-        skyBoxShaderProgram.createFragmentShader(Utils.loadResource("shaders/skybox_fragment.glsl"));
+        skyBoxShaderProgram.createVertexShader(Utils.loadResource("shaders/sb_vertex.vs"));
+        skyBoxShaderProgram.createFragmentShader(Utils.loadResource("shaders/sb_fragment.fs"));
         skyBoxShaderProgram.link();
 
+        // Create uniforms for projection matrix
         skyBoxShaderProgram.createUniform("projectionMatrix");
         skyBoxShaderProgram.createUniform("modelViewMatrix");
         skyBoxShaderProgram.createUniform("texture_sampler");
         skyBoxShaderProgram.createUniform("ambientLight");
+        skyBoxShaderProgram.createUniform("colour");
+        skyBoxShaderProgram.createUniform("hasTexture");
+
+        skyBoxShaderProgram.createUniform("depthsText");
+        skyBoxShaderProgram.createUniform("screenSize");
+    }
+
+    private void setupGeometryShader() throws Exception {
+        gBufferShaderProgram = new ShaderProgram();
+        gBufferShaderProgram.createVertexShader(Utils.loadResource("shaders/gbuffer_vertex.vs"));
+        gBufferShaderProgram.createFragmentShader(Utils.loadResource("shaders/gbuffer_fragment.fs"));
+        gBufferShaderProgram.link();
+
+        gBufferShaderProgram.createUniform("projectionMatrix");
+        gBufferShaderProgram.createUniform("viewMatrix");
+        gBufferShaderProgram.createUniform("texture_sampler");
+        gBufferShaderProgram.createUniform("normalMap");
+        gBufferShaderProgram.createMaterialUniform("material");
+        gBufferShaderProgram.createUniform("isInstanced");
+        gBufferShaderProgram.createUniform("modelNonInstancedMatrix");
+        gBufferShaderProgram.createUniform("selectedNonInstanced");
+        gBufferShaderProgram.createUniform("jointsMatrix");
+        gBufferShaderProgram.createUniform("numCols");
+        gBufferShaderProgram.createUniform("numRows");
+
+        // Create uniforms for shadow mapping
+        for (int i = 0; i < ShadowRenderer.NUM_CASCADES; i++) {
+            gBufferShaderProgram.createUniform("shadowMap_" + i);
+        }
+        gBufferShaderProgram.createUniform("orthoProjectionMatrix", ShadowRenderer.NUM_CASCADES);
+        gBufferShaderProgram.createUniform("lightViewMatrix", ShadowRenderer.NUM_CASCADES);
+        gBufferShaderProgram.createUniform("cascadeFarPlanes", ShadowRenderer.NUM_CASCADES);
+        gBufferShaderProgram.createUniform("renderShadow");
+    }
+
+    private void setupDirLightShader() throws Exception {
+        dirLightShaderProgram = new ShaderProgram();
+        dirLightShaderProgram.createVertexShader(Utils.loadResource("shaders/light_vertex.vs"));
+        dirLightShaderProgram.createFragmentShader(Utils.loadResource("shaders/dir_light_fragment.fs"));
+        dirLightShaderProgram.link();
+
+        dirLightShaderProgram.createUniform("modelMatrix");
+        dirLightShaderProgram.createUniform("projectionMatrix");
+
+        dirLightShaderProgram.createUniform("screenSize");
+        dirLightShaderProgram.createUniform("positionsText");
+        dirLightShaderProgram.createUniform("diffuseText");
+        dirLightShaderProgram.createUniform("specularText");
+        dirLightShaderProgram.createUniform("normalsText");
+        dirLightShaderProgram.createUniform("shadowText");
+
+        dirLightShaderProgram.createUniform("specularPower");
+        dirLightShaderProgram.createUniform("ambientLight");
+        dirLightShaderProgram.createDirectionalLightUniform("directionalLight");
+    }
+
+    private void setupPointLightShader() throws Exception {
+        pointLightShaderProgram = new ShaderProgram();
+        pointLightShaderProgram.createVertexShader(Utils.loadResource("shaders/light_vertex.vs"));
+        pointLightShaderProgram.createFragmentShader(Utils.loadResource("shaders/point_light_fragment.fs"));
+        pointLightShaderProgram.link();
+
+        pointLightShaderProgram.createUniform("modelMatrix");
+        pointLightShaderProgram.createUniform("projectionMatrix");
+
+        pointLightShaderProgram.createUniform("screenSize");
+        pointLightShaderProgram.createUniform("positionsText");
+        pointLightShaderProgram.createUniform("diffuseText");
+        pointLightShaderProgram.createUniform("specularText");
+        pointLightShaderProgram.createUniform("normalsText");
+        pointLightShaderProgram.createUniform("shadowText");
+
+        pointLightShaderProgram.createUniform("specularPower");
+        pointLightShaderProgram.createPointLightUniform("pointLight");
+    }
+
+    private void setupFogShader() throws Exception {
+        fogShaderProgram = new ShaderProgram();
+        fogShaderProgram.createVertexShader(Utils.loadResource("shaders/light_vertex.vs"));
+        fogShaderProgram.createFragmentShader(Utils.loadResource("shaders/fog_fragment.fs"));
+        fogShaderProgram.link();
+
+        fogShaderProgram.createUniform("modelMatrix");
+        fogShaderProgram.createUniform("viewMatrix");
+        fogShaderProgram.createUniform("projectionMatrix");
+
+        fogShaderProgram.createUniform("screenSize");
+        fogShaderProgram.createUniform("positionsText");
+        fogShaderProgram.createUniform("depthText");
+        fogShaderProgram.createUniform("sceneText");
+
+        fogShaderProgram.createFogUniform("fog");
+        fogShaderProgram.createUniform("ambientLight");
+        fogShaderProgram.createUniform("lightColour");
+        fogShaderProgram.createUniform("lightIntensity");
     }
 
     public void clear() {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     }
 
-    public void render(Window window, Camera camera, Scene scene, IHud hud) {
+    private void renderGeometry(Window window, Camera camera, Scene scene) {
+        // Render G-Buffer for writing
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, gBuffer.getGBufferId());
 
         clear();
 
-        if ( window.isResized() ) {
-            glViewport(0, 0, window.getWidth(), window.getHeight());
-            window.setResized(false);
+        glDisable(GL_BLEND);
+
+        gBufferShaderProgram.bind();
+
+        Matrix4f viewMatrix = camera.getViewMatrix();
+        Matrix4f projectionMatrix = window.getProjectionMatrix();
+        gBufferShaderProgram.setUniform("viewMatrix", viewMatrix);
+        gBufferShaderProgram.setUniform("projectionMatrix", projectionMatrix);
+
+        gBufferShaderProgram.setUniform("texture_sampler", 0);
+        gBufferShaderProgram.setUniform("normalMap", 1);
+
+        List<ShadowCascade> shadowCascades = shadowRenderer.getShadowCascades();
+        for (int i = 0; i < ShadowRenderer.NUM_CASCADES; i++) {
+            ShadowCascade shadowCascade = shadowCascades.get(i);
+            gBufferShaderProgram.setUniform("orthoProjectionMatrix", shadowCascade.getOrthoProjMatrix(), i);
+            gBufferShaderProgram.setUniform("cascadeFarPlanes", ShadowRenderer.CASCADE_SPLITS[i], i);
+            gBufferShaderProgram.setUniform("lightViewMatrix", shadowCascade.getLightViewMatrix(), i);
+        }
+        shadowRenderer.bindTextures(GL_TEXTURE2);
+        int start = 2;
+        for (int i = 0; i < ShadowRenderer.NUM_CASCADES; i++) {
+            gBufferShaderProgram.setUniform("shadowMap_" + i, start + i);
+        }
+        gBufferShaderProgram.setUniform("renderShadow", scene.isRenderShadows() ? 1 : 0);
+
+        renderNonInstancedMeshes(scene);
+
+        renderInstancedMeshes(scene, viewMatrix);
+
+        gBufferShaderProgram.unbind();
+
+        glEnable(GL_BLEND);
+    }
+
+    private void initLightRendering() {
+        // Bind scene buffer
+        glBindFramebuffer(GL_FRAMEBUFFER, sceneBuffer.getBufferId());
+
+        // Clear G-Buffer
+        clear();
+
+        // Disable depth testing to allow the drawing of multiple layers with the same depth
+        glDisable(GL_DEPTH_TEST);
+
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_ONE, GL_ONE);
+
+        // Bind GBuffer for reading
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer.getGBufferId());
+    }
+
+    private void endLightRendering() {
+        // Bind screen for writing
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glEnable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+    }
+
+    private void renderPointLights(Window window, Camera camera, Scene scene) {
+        pointLightShaderProgram.bind();
+
+        Matrix4f viewMatrix = camera.getViewMatrix();
+        Matrix4f projectionMatrix = window.getProjectionMatrix();
+        pointLightShaderProgram.setUniform("modelMatrix", bufferPassModelMatrix);
+        pointLightShaderProgram.setUniform("projectionMatrix", projectionMatrix);
+
+        // Specular factor
+        pointLightShaderProgram.setUniform("specularPower", specularPower);
+
+        // Bind the G-Buffer textures
+        int[] textureIds = this.gBuffer.getTextureIds();
+        int numTextures = textureIds != null ? textureIds.length : 0;
+        for (int i=0; i<numTextures; i++) {
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, textureIds[i]);
         }
 
-        // Update projection and view atrices once per render cycle
-        transformation.updateProjectionMatrix(FOV, window.getWidth(), window.getHeight(), Z_NEAR, Z_FAR);
-        transformation.updateViewMatrix(camera);
+        pointLightShaderProgram.setUniform("positionsText", 0);
+        pointLightShaderProgram.setUniform("diffuseText", 1);
+        pointLightShaderProgram.setUniform("specularText", 2);
+        pointLightShaderProgram.setUniform("normalsText", 3);
+        pointLightShaderProgram.setUniform("shadowText", 4);
 
-        renderScene(window, camera, scene);
+        pointLightShaderProgram.setUniform("screenSize", (float) gBuffer.getWidth(), (float)gBuffer.getHeight());
 
-        renderSkyBox(window, camera, scene);
+        SceneLight sceneLight = scene.getSceneLight();
+        PointLight[] pointLights = sceneLight.getPointLightList();
+        int numPointLights = pointLights != null ? pointLights.length : 0;
+        for(int i=0; i<numPointLights; i++) {
+            // Get a copy of the point light object and transform its position to view coordinates
+            PointLight currPointLight = new PointLight(pointLights[i]);
+            Vector3f lightPos = currPointLight.getPosition();
+            tmpVec.set(lightPos, 1);
+            tmpVec.mul(viewMatrix);
+            lightPos.x = tmpVec.x;
+            lightPos.y = tmpVec.y;
+            lightPos.z = tmpVec.z;
+            pointLightShaderProgram.setUniform("pointLight", currPointLight);
 
-        renderHud(window, hud);
+            bufferPassMesh.render();
+        }
+
+        pointLightShaderProgram.unbind();
+    }
+
+    private void renderDirectionalLight(Window window, Camera camera, Scene scene) {
+        dirLightShaderProgram.bind();
+
+        Matrix4f viewMatrix = camera.getViewMatrix();
+        Matrix4f projectionMatrix = window.getProjectionMatrix();
+        dirLightShaderProgram.setUniform("modelMatrix", bufferPassModelMatrix);
+        dirLightShaderProgram.setUniform("projectionMatrix", projectionMatrix);
+
+        // Specular factor
+        dirLightShaderProgram.setUniform("specularPower", specularPower);
+
+        // Bind the G-Buffer textures
+        int[] textureIds = this.gBuffer.getTextureIds();
+        int numTextures = textureIds != null ? textureIds.length : 0;
+        for (int i=0; i<numTextures; i++) {
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, textureIds[i]);
+        }
+
+        dirLightShaderProgram.setUniform("positionsText", 0);
+        dirLightShaderProgram.setUniform("diffuseText", 1);
+        dirLightShaderProgram.setUniform("specularText", 2);
+        dirLightShaderProgram.setUniform("normalsText", 3);
+        dirLightShaderProgram.setUniform("shadowText", 4);
+
+        dirLightShaderProgram.setUniform("screenSize", (float) gBuffer.getWidth(), (float)gBuffer.getHeight());
+
+        // Ambient light
+        SceneLight sceneLight = scene.getSceneLight();
+        dirLightShaderProgram.setUniform("ambientLight", sceneLight.getAmbientLight());
+
+        // Directional light
+        // Get a copy of the directional light object and transform its position to view coordinates
+        DirectionalLight currDirLight = new DirectionalLight(sceneLight.getDirectionalLight());
+        tmpVec.set(currDirLight.getDirection(), 0);
+        tmpVec.mul(viewMatrix);
+        currDirLight.setDirection(new Vector3f(tmpVec.x, tmpVec.y, tmpVec.z));
+        dirLightShaderProgram.setUniform("directionalLight", currDirLight);
+
+        bufferPassMesh.render();
+
+        dirLightShaderProgram.unbind();
+    }
+
+    private void renderFog(Window window, Camera camera, Scene scene) {
+        fogShaderProgram.bind();
+
+        Matrix4f viewMatrix = camera.getViewMatrix();
+        Matrix4f projectionMatrix = window.getProjectionMatrix();
+        fogShaderProgram.setUniform("modelMatrix", bufferPassModelMatrix);
+        fogShaderProgram.setUniform("viewMatrix", viewMatrix);
+        fogShaderProgram.setUniform("projectionMatrix", projectionMatrix);
+
+        // Bind the scene buffer texture and the the depth texture of the G-Buffer
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, gBuffer.getPositionTexture());
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, gBuffer.getDepthTexture());
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, sceneBuffer.getTextureId());
+
+        fogShaderProgram.setUniform("positionsText", 0);
+        fogShaderProgram.setUniform("depthText", 1);
+        fogShaderProgram.setUniform("sceneText", 2);
+
+        fogShaderProgram.setUniform("screenSize", (float) gBuffer.getWidth(), (float)gBuffer.getHeight());
+
+        fogShaderProgram.setUniform("fog", scene.getFog());
+        SceneLight sceneLight = scene.getSceneLight();
+        fogShaderProgram.setUniform("ambientLight", sceneLight.getAmbientLight());
+        DirectionalLight dirLight = sceneLight.getDirectionalLight();
+        fogShaderProgram.setUniform("lightColour", dirLight.getColor());
+        fogShaderProgram.setUniform("lightIntensity", dirLight.getIntensity());
+
+        bufferPassMesh.render();
+
+        fogShaderProgram.unbind();
+    }
+
+    private void renderParticles(Window window, Camera camera, Scene scene) {
+        // Support for transparencies
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        particlesShaderProgram.bind();
+
+        Matrix4f viewMatrix = camera.getViewMatrix();
+        particlesShaderProgram.setUniform("viewMatrix", viewMatrix);
+        particlesShaderProgram.setUniform("texture_sampler", 0);
+        Matrix4f projectionMatrix = window.getProjectionMatrix();
+        particlesShaderProgram.setUniform("projectionMatrix", projectionMatrix);
+
+        IParticleEmitter[] emitters = scene.getParticleEmitters();
+        int numEmitters = emitters != null ? emitters.length : 0;
+
+        glDepthMask(false);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+        for (int i = 0; i < numEmitters; i++) {
+            IParticleEmitter emitter = emitters[i];
+            InstancedMesh mesh = (InstancedMesh) emitter.getBaseParticle().getMesh();
+
+            Texture text = mesh.getMaterial().getTexture();
+            particlesShaderProgram.setUniform("numCols", text.getNumCols());
+            particlesShaderProgram.setUniform("numRows", text.getNumRows());
+
+            mesh.renderListInstanced(emitter.getParticles(), true, transformation, viewMatrix);
+        }
+
+        glDisable(GL_BLEND);
+        glDepthMask(true);
+
+        particlesShaderProgram.unbind();
     }
 
     private void renderSkyBox(Window window, Camera camera, Scene scene) {
-        skyBoxShaderProgram.bind();
-
-        skyBoxShaderProgram.setUniform("texture_sampler", 0);
-
-        Matrix4f projectionMatrix = transformation.getProjectionMatrix();
-        skyBoxShaderProgram.setUniform("projectionMatrix", projectionMatrix);
         SkyBox skyBox = scene.getSkyBox();
-        Matrix4f viewMatrix = transformation.getViewMatrix();
-        viewMatrix.m30(0);
-        viewMatrix.m31(0);
-        viewMatrix.m32(0);
-        Matrix4f modelViewMatrix = transformation.buildModelViewMatrix(skyBox, viewMatrix);
-        skyBoxShaderProgram.setUniform("modelViewMatrix", modelViewMatrix);
-        skyBoxShaderProgram.setUniform("ambientLight", scene.getSceneLight().getSkyBoxLight());
+        if (skyBox != null) {
+            skyBoxShaderProgram.bind();
 
-        scene.getSkyBox().getMesh().render();
+            skyBoxShaderProgram.setUniform("texture_sampler", 0);
 
-        skyBoxShaderProgram.unbind();
+            Matrix4f projectionMatrix = window.getProjectionMatrix();
+            skyBoxShaderProgram.setUniform("projectionMatrix", projectionMatrix);
+            Matrix4f viewMatrix = camera.getViewMatrix();
+            float m30 = viewMatrix.m30();
+            viewMatrix.m30(0);
+            float m31 = viewMatrix.m31();
+            viewMatrix.m31(0);
+            float m32 = viewMatrix.m32();
+            viewMatrix.m32(0);
+
+            Mesh mesh = skyBox.getMesh();
+            Matrix4f modelViewMatrix = transformation.buildModelViewMatrix(skyBox, viewMatrix);
+            skyBoxShaderProgram.setUniform("modelViewMatrix", modelViewMatrix);
+            skyBoxShaderProgram.setUniform("ambientLight", scene.getSceneLight().getSkyBoxLight());
+            skyBoxShaderProgram.setUniform("colour", mesh.getMaterial().getDiffuseColour());
+            skyBoxShaderProgram.setUniform("hasTexture", mesh.getMaterial().isTextured() ? 1 : 0);
+
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, gBuffer.getDepthTexture());
+            skyBoxShaderProgram.setUniform("screenSize", (float)window.getWidth(), (float)window.getHeight());
+            skyBoxShaderProgram.setUniform("depthsText", 1);
+
+            mesh.render();
+
+            viewMatrix.m30(m30);
+            viewMatrix.m31(m31);
+            viewMatrix.m32(m32);
+            skyBoxShaderProgram.unbind();
+        }
     }
 
-    public void renderScene(Window window, Camera camera, Scene scene) {
-        sceneShaderProgram.bind();
+    private void renderNonInstancedMeshes(Scene scene) {
+        gBufferShaderProgram.setUniform("isInstanced", 0);
 
-        Matrix4f projectionMatrix = transformation.getProjectionMatrix();
-        sceneShaderProgram.setUniform("projectionMatrix", projectionMatrix);
-
-        Matrix4f viewMatrix = transformation.getViewMatrix();
-
-        SceneLight sceneLight = scene.getSceneLight();
-        renderLights(viewMatrix, sceneLight);
-
-        sceneShaderProgram.setUniform("texture_sampler", 0);
         // Render each mesh with the associated game Items
         Map<Mesh, List<GameItem>> mapMeshes = scene.getGameMeshes();
         for (Mesh mesh : mapMeshes.keySet()) {
-            sceneShaderProgram.setUniform("material", mesh.getMaterial());
+            gBufferShaderProgram.setUniform("material", mesh.getMaterial());
+
+            Texture text = mesh.getMaterial().getTexture();
+            if (text != null) {
+                gBufferShaderProgram.setUniform("numCols", text.getNumCols());
+                gBufferShaderProgram.setUniform("numRows", text.getNumRows());
+            }
+
             mesh.renderList(mapMeshes.get(mesh), (GameItem gameItem) -> {
-                        Matrix4f modelViewMatrix = transformation.buildModelViewMatrix(gameItem, viewMatrix);
-                        sceneShaderProgram.setUniform("modelViewMatrix", modelViewMatrix);
+                        gBufferShaderProgram.setUniform("selectedNonInstanced", gameItem.isSelected() ? 1.0f : 0.0f);
+                        Matrix4f modelMatrix = transformation.buildModelMatrix(gameItem);
+                        gBufferShaderProgram.setUniform("modelNonInstancedMatrix", modelMatrix);
+                        if (gameItem instanceof AnimGameItem) {
+                            AnimGameItem animGameItem = (AnimGameItem) gameItem;
+                            AnimatedFrame frame = animGameItem.getCurrentAnimation().getCurrentFrame();
+                            gBufferShaderProgram.setUniform("jointsMatrix", frame.getJointMatrices());
+                        }
                     }
             );
         }
-
-        sceneShaderProgram.unbind();
     }
 
-    private void renderLights(Matrix4f viewMatrix, SceneLight sceneLight) {
+    private void renderInstancedMeshes(Scene scene, Matrix4f viewMatrix) {
+        gBufferShaderProgram.setUniform("isInstanced", 1);
 
-        sceneShaderProgram.setUniform("ambientLight", sceneLight.getAmbientLight());
-        sceneShaderProgram.setUniform("specularPower", specularPower);
+        // Render each mesh with the associated game Items
+        Map<InstancedMesh, List<GameItem>> mapMeshes = scene.getGameInstancedMeshes();
+        for (InstancedMesh mesh : mapMeshes.keySet()) {
+            Texture text = mesh.getMaterial().getTexture();
+            if (text != null) {
+                gBufferShaderProgram.setUniform("numCols", text.getNumCols());
+                gBufferShaderProgram.setUniform("numRows", text.getNumRows());
+            }
 
-        // Process Point Lights
-        PointLight[] pointLightList = sceneLight.getPointLightList();
-        int numLights = pointLightList != null ? pointLightList.length : 0;
-        for (int i = 0; i < numLights; i++) {
-            // Get a copy of the point light object and transform its position to view coordinates
-            PointLight currPointLight = new PointLight(pointLightList[i]);
-            Vector3f lightPos = currPointLight.getPosition();
-            Vector4f aux = new Vector4f(lightPos, 1);
-            aux.mul(viewMatrix);
-            lightPos.x = aux.x;
-            lightPos.y = aux.y;
-            lightPos.z = aux.z;
-            sceneShaderProgram.setUniform("pointLights", currPointLight, i);
+            gBufferShaderProgram.setUniform("material", mesh.getMaterial());
+
+            filteredItems.clear();
+            for (GameItem gameItem : mapMeshes.get(mesh)) {
+                if (gameItem.isInsideFrustum()) {
+                    filteredItems.add(gameItem);
+                }
+            }
+
+            mesh.renderListInstanced(filteredItems, transformation, viewMatrix);
         }
-
-        // Process Spot Ligths
-        SpotLight[] spotLightList = sceneLight.getSpotLightList();
-        numLights = spotLightList != null ? spotLightList.length : 0;
-        for (int i = 0; i < numLights; i++) {
-            // Get a copy of the spot light object and transform its position and cone direction to view coordinates
-            SpotLight currSpotLight = new SpotLight(spotLightList[i]);
-            Vector4f dir = new Vector4f(currSpotLight.getConeDirection(), 0);
-            dir.mul(viewMatrix);
-            currSpotLight.setConeDirection(new Vector3f(dir.x, dir.y, dir.z));
-
-            Vector3f lightPos = currSpotLight.getPointLight().getPosition();
-            Vector4f aux = new Vector4f(lightPos, 1);
-            aux.mul(viewMatrix);
-            lightPos.x = aux.x;
-            lightPos.y = aux.y;
-            lightPos.z = aux.z;
-
-            sceneShaderProgram.setUniform("spotLights", currSpotLight, i);
-        }
-
-        // Get a copy of the directional light object and transform its position to view coordinates
-        DirectionalLight currDirLight = new DirectionalLight(sceneLight.getDirectionalLight());
-        Vector4f dir = new Vector4f(currDirLight.getDirection(), 0);
-        dir.mul(viewMatrix);
-        currDirLight.setDirection(new Vector3f(dir.x, dir.y, dir.z));
-        sceneShaderProgram.setUniform("directionalLight", currDirLight);
-    }
-
-    private void renderHud(Window window, IHud hud) {
-        hudShaderProgram.bind();
-
-        Matrix4f ortho = transformation.getOrthoProjectionMatrix(0, window.getWidth(), window.getHeight(), 0);
-        for (GameItem gameItem : hud.getGameItems()) {
-            Mesh mesh = gameItem.getMesh();
-            // Set ortohtaphic and model matrix for this HUD item
-            Matrix4f projModelMatrix = transformation.buildOrtoProjModelMatrix(gameItem, ortho);
-            hudShaderProgram.setUniform("projModelMatrix", projModelMatrix);
-            hudShaderProgram.setUniform("colour", gameItem.getMesh().getMaterial().getAmbientColour());
-            hudShaderProgram.setUniform("hasTexture", gameItem.getMesh().getMaterial().isTextured() ? 1 : 0);
-
-            // Render the mesh for this HUD item
-            mesh.render();
-        }
-
-        hudShaderProgram.unbind();
     }
 
     public void cleanup() {
+        if (shadowRenderer != null) {
+            shadowRenderer.cleanup();
+        }
         if (skyBoxShaderProgram != null) {
             skyBoxShaderProgram.cleanup();
         }
-        if (sceneShaderProgram != null) {
-            sceneShaderProgram.cleanup();
+        if (particlesShaderProgram != null) {
+            particlesShaderProgram.cleanup();
         }
-        if (hudShaderProgram != null) {
-            hudShaderProgram.cleanup();
+        if (gBufferShaderProgram != null) {
+            gBufferShaderProgram.cleanup();
+        }
+        if (dirLightShaderProgram != null) {
+            dirLightShaderProgram.cleanup();
+        }
+        if (pointLightShaderProgram != null) {
+            pointLightShaderProgram.cleanup();
+        }
+        if (gBuffer != null) {
+            gBuffer.cleanUp();
+        }
+        if (bufferPassMesh != null) {
+            bufferPassMesh.cleanUp();
         }
     }
 }

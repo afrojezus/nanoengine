@@ -5,17 +5,24 @@ package game;
 
 import engine.GameEngine;
 import engine.IGameLogic;
+import engine.Window;
 
 public class Main {
     public static void main(String[] args) {
-        System.setProperty("java.awt.headless", "true");
         try {
-            IGameLogic gameLogic = new Nanodesu();
-            GameEngine gameEng = new GameEngine("NANODESU", 800, 600, true, gameLogic);
+            boolean vSync = false;
+            IGameLogic gameLogic = new Game();
+            Window.WindowOptions opts = new Window.WindowOptions();
+            opts.cullFace = false;
+            opts.showFps = true;
+            opts.compatibleProfile = true;
+            opts.antialiasing = false;
+            opts.frustumCulling = false;
+            GameEngine gameEng = new GameEngine("NANOENGINE", vSync, opts, gameLogic);
             gameEng.run();
-        } catch(Exception excp) {
-          excp.printStackTrace();;
-          System.exit(-1);
+        } catch (Exception excp) {
+            excp.printStackTrace();
+            System.exit(-1);
         }
     }
 }
